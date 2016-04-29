@@ -8,7 +8,7 @@ This project came into being as one example (thanks, Geoff) of controlling somet
 
 Add the ESP8266 board config (details found **[here](https://github.com/esp8266/Arduino)**) to your Arduino installation to obtain board support as well the necessary libraries. Then, simply clone this repo to your Arduino sketchbook folder and upload via the Arduino IDE (I'm using an Adafruit Huzzah ESP8266).
 
-You will also have to clone the PGSensorHub repo and upload that to whatever board you may be using to acquire data from your Power Glove (or what have you) (I'm using a Teensy LC).
+You will also have to download the [PGSensorHub](https://github.com/nullhan/PGSensorHub) project and upload that to whatever board you may be using to acquire data from your Power Glove (or what have you) (I'm using a Teensy LC).
 
 ## Usage
 
