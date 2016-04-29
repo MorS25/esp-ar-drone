@@ -31,7 +31,13 @@
 #define video_mask       0x00000002
 #define fly_mask         0x00000001
 
-// Power Glove keypad masks
+// ESP status masks
+#define ESP_CONNECTED   0x1
+#define ESP_FLYING      0x2
+#define ESP_LOWBAT      0x4
+#define ESP_EMERGENCY   0x8
+
+// Power Glove keypad masks - currently unused
 #define button0_mask    0x00000001
 #define button1_mask    0x00000001
 #define button2_mask    0x00000001
