@@ -12,10 +12,11 @@
   const char* ssidpass = "yourpassword";
   const IPAddress drone(192, 168, 5, 110);
 #else
-  const char* ssid = "Drone"; //1 = 092417, 0 = 116276
+  char* ssid = "";
   const IPAddress drone(192, 168, 1, 1);
-#endif
-
+#endif  
+int droneSSID = 0;
+  
 const int navPort = 5554;
 const int atPort = 5556;
 
@@ -120,10 +121,10 @@ void clearBit(unsigned int& status_var, unsigned int mask);
 void toggleBit(unsigned int& status_var, unsigned int mask);
 
 ATCommand loopCommands[2];
-unsigned long littlecounter;  // Conuter between 30ms command transmissions
 int m[] = {0,0};
 char inBuffer[20] = {0};
 char *tokenBuffer[4];
+int ESPState = MODE_SETUP;
 
 void setup() {
   Serial.begin(115200);
@@ -138,22 +139,14 @@ void setup() {
   ctrl_state = (uint32_t*)&incoming[20];
   battery = (uint32_t*)&incoming[24];
 
-  connectToAR();
-
-//  Serial.println("Trim calibration...");
-//  setupCommands[0] = ftrimCommand();
-//  emergencyInitCounter = millis();
-//  while (millis() - emergencyInitCounter < 100) {
-//    sendPacket(setupCommands[0]);
-//    delay(30);
-//  }
+  lastSend = millis();
 }
 
 void loop() {
-  while (WiFi.status() == WL_CONNECTED) {
-    
-    debugcommander();
-    
+   
+  debugcommander();
+
+  if (WiFi.status() == WL_CONNECTED) {
     if(NavUdp.parsePacket()) {
       lastReceive = millis();
       int len = NavUdp.read(incoming, 1024);
@@ -179,52 +172,18 @@ void loop() {
       if(((*state & emergency_mask) == 0 ||(*state & userEmer_mask) == 0) && (ESP_status & ESP_EMERGENCY)) {
         clearBit(ESP_status, ESP_EMERGENCY);
       }
-  
-  #if DEBUG==1
-      Serial.print("lowbat=");
-      Serial.print((ESP_status & ESP_LOWBAT) ? "T": "F");
-      Serial.print(",flying=");
-      Serial.print((ESP_status & ESP_FLYING) ? "T": "F");
-      Serial.print(",emergency=");
-      Serial.println((ESP_status & ESP_EMERGENCY) ? "T": "F");
-  
-      String header_out = String(*header);
-      Serial.print("header: \t");
-      Serial.print(header_out);
-      Serial.println();
-  
-      String state_out = String(*state);
-      Serial.print("state: \t");
-      Serial.print(state_out);
-      Serial.println();
-      
-      String navSequence_out = String(*navSequence);
-      Serial.print("navSequence: \t");
-      Serial.print(navSequence_out);
-      Serial.println();
-  
-      String ctrl_state_out = String(*ctrl_state);
-      Serial.print("ctrl_state: \t");
-      Serial.print(ctrl_state_out);
-      Serial.println();
-      
-      String battery_out = String(*battery);
-      Serial.print("battery: \t");
-      Serial.print(battery_out);
-      Serial.println();
-  #endif
     }
-  
-    if (millis() - lastSend >= 40) {
-      ATCommand watchdog = comwdgCommand();
-      sendPacket(watchdog);
+    
+    if (millis() - lastSend > 30) {
+      sendPacket(loopCommands[0]);
+      sendPacket(loopCommands[1]);
       lastSend = millis();
     }
   }
-    
-  Serial.println("disconnected from AR, attempting to reconnect");
-//    clearBit(ESP_status, ESP_CONNECTED);
-  connectToAR();
+  
+  if (ESPState == MODE_SETUP && ssid != "") {
+    connectToAR();
+  }
 }
 
 void debugcommander() {
@@ -259,35 +218,35 @@ void debugcommander() {
       }
       Serial.println(m[1]);
 
-      if (!strcmp(tokenBuffer[0],"0") && !(ESP_status & ESP_FLYING)) {
+      if (!strcmp(tokenBuffer[0],BUTTON_CENTER) && !(ESP_status & ESP_FLYING)) {
         sendPacket(ftrimCommand());
-      } else if (!strcmp(tokenBuffer[0], "P")) {
+      } else if (!strcmp(tokenBuffer[0], BUTTON_START)) {
         if (!(ESP_status & ESP_FLYING) && !(ESP_status & ESP_EMERGENCY)) {
           loopCommands[0] = refCommand(true, false);
         } else if ((ESP_status & ESP_FLYING) || (ESP_status & ESP_EMERGENCY)) {
           loopCommands[0] = refCommand(false, false);
         }
-      } else if (!strcmp(tokenBuffer[0],"S")) {
+      } else if (!strcmp(tokenBuffer[0],BUTTON_SELECT)) {
         loopCommands[0] = refCommand(false, true);
+      } else if (!strcmp(tokenBuffer[0],"0")) {
+        ssid = "ardrone2_116276";
+        ESPState = MODE_SETUP;
+      } else if (!strcmp(tokenBuffer[0],"1")) {
+        ssid = "Drone";
+        ESPState = MODE_SETUP;
       }
 
-      if (!strcmp(tokenBuffer[1],"R")) {
+      if (!strcmp(tokenBuffer[1],POSTURE_RELAXED)) {
         memset(m, NULL, 2*sizeof(int));
         loopCommands[1] = pcmdCommand(false, false, m);
-      } else if (!strcmp(tokenBuffer[1],"F")) {
+      } else if (!strcmp(tokenBuffer[1],POSTURE_FIST)) {
         loopCommands[1] = pcmdCommand(true, true, m);
-      } else if (!strcmp(tokenBuffer[1],"P") && (ESP_status & ESP_FLYING)) {
+      } else if (!strcmp(tokenBuffer[1],POSTURE_POINT) && (ESP_status & ESP_FLYING)) {
         loopCommands[1] = pcmdCommand(true, false, m);
       }
 
       memset(inBuffer, 0, 20);
     }
-  }
-
-  if (millis() - lastSend > 30) {
-    sendPacket(loopCommands[0]);
-    sendPacket(loopCommands[1]);
-    littlecounter = millis();
   }
 }
 
@@ -396,6 +355,15 @@ void sendPacket(ATCommand cmd) {
 }
 
 void connectToAR() {
+  // Disconnect from WiFi if connected
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Disconnecting from current WiFi");
+    WiFi.disconnect();
+    while (WiFi.status() == WL_CONNECTED) {
+      delay(200);
+    }
+  }
+  
   // Connect to WiFi network
   Serial.println("connecting to AR WiFi");
   WiFi.mode(WIFI_STA);
@@ -445,7 +413,7 @@ void connectToAR() {
   // Starting main loop
   loopCommands[0] = refCommand(false, false);     // Ensure AR is landed...
   loopCommands[1] = pcmdCommand(false, false, m);  // And not trying to move
-  littlecounter = millis();
+  ESPState = MODE_NORMAL;
 }
 
 void setBit(unsigned int& status_var, unsigned int mask) {

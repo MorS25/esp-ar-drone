@@ -37,25 +37,21 @@
 #define ESP_LOWBAT      0x4
 #define ESP_EMERGENCY   0x8
 
-// Power Glove keypad masks - currently unused
-#define button0_mask    0x00000001
-#define button1_mask    0x00000001
-#define button2_mask    0x00000001
-#define button3_mask    0x00000001
-#define button4_mask    0x00000001
-#define button5_mask    0x00000001
-#define button6_mask    0x00000001
-#define button7_mask    0x00000001
-#define button8_mask    0x00000001
-#define button9_mask    0x00000001
-#define buttonSELECT_mask    0x00000001
-#define buttonSTART_mask    0x00000001
-#define buttonUP_mask    0x00000001
-#define buttonDOWN_mask    0x00000001
-#define buttonLEFT_mask    0x00000001
-#define buttonRIGHT_mask    0x00000001
-#define buttonA_mask    0x00000001
-#define buttonB_mask    0x00000001
-#define buttonCENTER_mask    0x00000001
-#define buttonPROG_mask    0x00000001
-#define buttonENTER_mask    0x00000001
+// PGSensorHub definitions
+#define BUTTON_SELECT   "S"
+#define BUTTON_START    "P"
+#define BUTTON_PROGRAM  "M"
+#define BUTTON_ENTER    "X"
+#define BUTTON_CENTER   "C"
+#define BUTTON_NONE     "-"
+
+#define POSTURE_RELAXED "R"
+#define POSTURE_POINT   "P"
+#define POSTURE_FIST    "F"
+#define POSTURE_THUMB   "T"
+#define POSTURE_BIRD    "B"
+#define POSTURE_PEACE   "Y"
+#define POSTURE_GUN     "G"
+
+#define MODE_SETUP      0
+#define MODE_NORMAL     1
